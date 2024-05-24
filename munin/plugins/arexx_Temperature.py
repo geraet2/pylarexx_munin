@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- python -*-
 # -*- coding: <utf-8> -*-
 """
@@ -47,6 +47,12 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 # sys required to read command line argument
 import sys
+import socket
+import time
+
+# read data from recent value socket of pylarexx daemon
+HOST = "localhost"  # The server's hostname or IP address, where pylarexx is running
+PORT = 3333  # The port used by the server as specified in /etc/pylarexx
 
 sensorList = {
 "Temperature" :
@@ -71,29 +77,29 @@ sensorList = {
 # Configure munin graph
 # Read sensor information from dict
 def config(quantity):
-    print "multigraph %s" % (quantity)
+    print("multigraph %s" % (quantity))
     if quantity == "Temperature":
-        print "graph_title Temperatur"
-        print "graph_vlabel Temperatur / K"
-        print "graph_info Temperaturen"
+        print("graph_title Temperatur")
+        print("graph_vlabel Temperatur / K")
+        print("graph_info Temperaturen")
     elif quantity == "Humidity":
-        print "graph_title Luftfeuchte"
-        print "graph_vlabel RH / %"
-        print "graph_info Relative Feuchtigkeit"
+        print("graph_title Luftfeuchte")
+        print("graph_vlabel RH / %")
+        print("graph_info Relative Feuchtigkeit")
     elif quantity == "CO2":
-        print "graph_title CO2-Konzentration"
-        print "graph_vlabel CO2 / ppm"
-        print "graph_info CO2-Konzentrationen"
+        print("graph_title CO2-Konzentration")
+        print("graph_vlabel CO2 / ppm")
+        print("graph_info CO2-Konzentrationen")
     elif quantity == "Signal":
-        print "graph_title Signalstaerke"
-        print "graph_vlabel RF / %"
-        print "graph_info Staerke des Funksignals"
+        print("graph_title Signalstaerke")
+        print("graph_vlabel RF / %")
+        print("graph_info Staerke des Funksignals")
         quantity="Temperature"
 
-    print "graph_category Umweltdaten"
+    print("graph_category Umweltdaten")
     for name in sensorList[quantity]:
         label = sensorList[quantity][name]["label"]
-        print "%s.label %s" % (name, label)
+        print("%s.label %s" % (name, label))
 
 def dataStorage(quantity):
     # all units stored in one file
@@ -103,37 +109,39 @@ def dataStorage(quantity):
 
 # Print data
 def report(quantity):
-    print "multigraph %s" % (quantity)
+    print("multigraph %s" % (quantity))
     data = []
     try:
-        with open(dataStorage(quantity), "r+") as file:
-            rl = file.readlines()
-            for line in rl[:]:
+        #with open(dataStorage(quantity), "r+") as file:
+            #rl = file.readlines()
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as recentValues:
+            recentValues.connect((HOST, PORT))
+            rcv = recentValues.recv(1024)
+            rl = rcv.decode("utf8")            
+            for line in rl[:-1].split('\n'):
+                ### when reading from file ###
                 # ID, raw data, value unit, time, signal strength, label, unit
-                (key, raw, valueText, time, signal, label, unitText) = line.split(',')
+                # (keyID, raw, valueText, time, signal, label, unitText) = line.split(',')
+                ### when reading from socket ###
+                (keyID, valueText, timeRcv, signal, unitText, label, key2) = line.split(',')
                 try:
                     signal = int(signal)
                     if (type(signal) == int) and (quantity in unitText):
                         (value, unit) = valueText.split(' ')
-                        data.append( [key, time, value] )
+                        data.append( [keyID, timeRcv, value] )
                     elif (type(signal) == int) and (quantity == "Signal"):
-                        data.append( [key, time, signal] )
+                        data.append( [keyID, timeRcv, signal] )
                 except:
-                    continue
-
-        # keep data from 300 sec. for max. 11 sensors
-        # (300s sampled every 10s * 11 sensors = 330 lines)
-        #file.seek(0,0)   # rewind the file
-        #file.truncate(0)  # erase all of it
-        #file.write("".join(rl[-330:]))  # write the last 330 lines again
+                    print("parsing data failed")
     except:
-        print "file open failed"
+        print("file open failed")
 
     for line in data:
-        key = line[0]
-        time = line[1]
+        keyID = line[0]
+        timeRead = line[1]
+        #timeRead = int(time.time())
         value = line[2]
-        print "%s.value %s:%s" % (key, time, value)
+        print("%s.value %s:%s" % (keyID, timeRead, value))
 
 # Munin autoconf - does nothing at the moment
 def autoconf():
@@ -141,9 +149,9 @@ def autoconf():
         data = report("Temperature")
     finally:
         if data:
-            print "yes"
+            print("yes")
         else:
-            print "no"
+            print("no")
 
 
 def main():
