@@ -99,7 +99,7 @@ def config(quantity):
     print("graph_category Umweltdaten")
     for name in sensorList[quantity]:
         label = sensorList[quantity][name]["label"]
-        print("%s.label %s" % (name, label))
+        print("ax%s.label %s" % (name, label))
 
 # Print data
 def report(quantity):
@@ -123,14 +123,14 @@ def report(quantity):
                 except:
                     print("parsing data failed")
     except:
-        print("file open failed")
+        print("socket open failed")
 
     for line in data:
         keyID = line[0]
         timeRead = line[1]
-        #timeRead = int(time.time())
+        #timeRead = int(time.time()) # in case time on receiver is wrong
         value = line[2]
-        print("%s.value %s:%s" % (keyID, timeRead, value))
+        print("ax%s.value %s:%s" % (keyID, timeRead, value))
 
 # Munin autoconf - does nothing at the moment
 def autoconf():
