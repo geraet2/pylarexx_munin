@@ -101,27 +101,16 @@ def config(quantity):
         label = sensorList[quantity][name]["label"]
         print("%s.label %s" % (name, label))
 
-def dataStorage(quantity):
-    # all units stored in one file
-    dataStorage="/var/run/pylarexx"
-    fileName = "%s/sensor.dat" % (dataStorage)
-    return fileName
-
 # Print data
 def report(quantity):
     print("multigraph %s" % (quantity))
     data = []
     try:
-        #with open(dataStorage(quantity), "r+") as file:
-            #rl = file.readlines()
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as recentValues:
             recentValues.connect((HOST, PORT))
             rcv = recentValues.recv(1024)
             rl = rcv.decode("utf8")            
             for line in rl[:-1].split('\n'):
-                ### when reading from file ###
-                # ID, raw data, value unit, time, signal strength, label, unit
-                # (keyID, raw, valueText, time, signal, label, unitText) = line.split(',')
                 ### when reading from socket ###
                 (keyID, valueText, timeRcv, signal, unitText, label, key2) = line.split(',')
                 try:
