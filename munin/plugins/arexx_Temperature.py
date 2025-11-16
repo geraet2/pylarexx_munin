@@ -77,24 +77,31 @@ sensorList = {
 # Configure munin graph
 # Read sensor information from dict
 def config(quantity):
-    print("multigraph %s" % (quantity))
+    #print("multigraph %s" % (quantity)) # not really multigraph
     if quantity == "Temperature":
-        print("graph_title Temperatur")
+        print("graph_title 1. Temperatur")
         print("graph_vlabel Temperatur / K")
         print("graph_info Temperaturen")
     elif quantity == "Humidity":
-        print("graph_title Luftfeuchte")
+        print("graph_title 2. Luftfeuchte")
         print("graph_vlabel RH / %")
         print("graph_info Relative Feuchtigkeit")
     elif quantity == "CO2":
-        print("graph_title CO2-Konzentration")
+        print("graph_title 3. CO2-Konzentration")
         print("graph_vlabel CO2 / ppm")
         print("graph_info CO2-Konzentrationen")
     elif quantity == "Signal":
-        print("graph_title Signalstaerke")
+        print("graph_title 4. Signalstaerke")
         print("graph_vlabel RF / %")
         print("graph_info Staerke des Funksignals")
         quantity="Temperature"
+    elif quantity == "Voltage":
+        print("graph_title 5. Batteriespannung")
+        print("graph_vlabel U / V")
+        print("graph_info Spannung der Batterie")
+        quantity="Temperature"
+
+
 
     print("graph_category Umweltdaten")
     for name in sensorList[quantity]:
@@ -103,18 +110,21 @@ def config(quantity):
 
 # Print data
 def report(quantity):
-    print("multigraph %s" % (quantity))
+    #print("multigraph %s" % (quantity)) # not really multigraph
     data = []
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as recentValues:
             recentValues.connect((HOST, PORT))
-            rcv = recentValues.recv(1024)
-            rl = rcv.decode("utf8")            
+            rcv = recentValues.recv(8192)
+            rl = rcv.decode("utf8")
             for line in rl[:-1].split('\n'):
                 ### when reading from socket ###
                 (keyID, valueText, timeRcv, signal, unitText, label, key2) = line.split(',')
                 try:
-                    signal = int(signal)
+                    if (signal == "-"):
+                        signal = 0
+                    else:
+                        signal = int(signal)
                     if (type(signal) == int) and (quantity in unitText):
                         (value, unit) = valueText.split(' ')
                         data.append( [keyID, timeRcv, value] )
@@ -156,6 +166,8 @@ def main():
         quantity = "CO2"
     elif "Signal" in pluginName:
         quantity = "Signal"
+    elif "Voltage" in pluginName:
+        quantity = "Voltage"
 
     if len(sys.argv)>1:
         command = sys.argv[1]
